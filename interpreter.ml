@@ -552,21 +552,31 @@ and ast_e =
 let rec ast_ize_P (p:parse_tree) : ast_sl =
   match p with
   | PT_nt ("P", sl :: [PT_term "$$"]) -> ast_ize_SL sl
+  
   | _ -> raise (Failure "malformed parse tree in ast_ize_P")
 
 and ast_ize_SL (sl:parse_tree) : ast_sl =
   match sl with
   | PT_nt ("SL", []) -> []
   | PT_nt ("SL", s :: tl) -> (ast_ize_S s) @ [(ast_ize_SL tl)]
+  
   | _ -> raise (Failure "malformed parse tree in ast_ize_SL")
 
 and ast_ize_S (s:parse_tree) : ast_s =
   match s with
   | PT_nt ("S", [PT_id lhs; PT_term ":="; expr])
         -> AST_assign (lhs, (ast_ize_expr expr))
-  (*
-     your code here ...
-  *)
+  | PT_nt ("S", [PT_term "read"; PT_id var])
+        -> AST_read var
+  | PT_nt ("S", [PT_term "write"; expr])
+        -> AST_write (ast_ize_expr expr)
+  | PT_nt ("S", [PT_term "if"; reln, sl, PT_term "fi"])
+        -> AST_if ((ast_ize_expr reln), (ast_ize_SL sl))
+  | PT_nt ("S", [PT_term "do"; sl, PT_term "od"])
+        -> AST_do (ast_ize_SL sl)
+  | PT_nt ("S", [PT_term "check"; expr])
+        -> AST_check (ast_ize_expr expr)
+
   | _ -> raise (Failure "malformed parse tree in ast_ize_S")
 
 and ast_ize_expr (e:parse_tree) : ast_e =
