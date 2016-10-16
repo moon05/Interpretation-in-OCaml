@@ -612,9 +612,20 @@ and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
   (* lhs in an inherited attribute.
      tail is a TT or FT parse tree node *)
   match tail with
-  (*
-     your code here ...
-  *)
+  | PT_nt ("TT", []) -> []
+  | PT_nt ("TT", [PT_nt ("ao", ao); t; tt])
+		->
+        (match ao with
+        | "+" | "-"
+              -> AST_binop (ao, lhs, (ast_ize_expr_tail (ast_ize_expr t) tt))
+        | _ -> raise (Failure "malformed parse tree in ao") )
+  | PT_nt ("FT", []) -> []
+  | PT_nt ("FT", [PT_nt ("mo", mo); f; ft])
+		->
+		(match mo with
+        | "*" | "/"
+              -> AST_binop (mo, lhs, (ast_ize_expr_tail (ast_ize_expr f) ft))
+        | _ -> raise (Failure "malformed parse tree in mo") )
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
 ;;
 
