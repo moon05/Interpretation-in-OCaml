@@ -576,19 +576,25 @@ and ast_ize_S (s:parse_tree) : ast_s =
         -> AST_do (ast_ize_SL sl)
   | PT_nt ("S", [PT_term "check"; expr])
         -> AST_check (ast_ize_expr expr)
-
   | _ -> raise (Failure "malformed parse tree in ast_ize_S")
 
 and ast_ize_expr (e:parse_tree) : ast_e =
   (* e is an R, E, T, or F parse tree node *)
   match e with
-  (*
-     your code here ...
-  *)
+  | PT_nt ("R", [expr; expr_tail])
+		-> ast_ize_reln_tail (ast_ize_expr expr) expr_tail
+  | PT_nt ("E", [term; term_tail])
+		-> ast_ize_expr_tail (ast_ize_expr term) term_tail
+  | PT_nt ("T", [fact; fact_tail])
+		-> ast_ize_expr_tail (ast_ize_expr fact) fact_tail
+  | PT_nt ("F", [PT_id var]) -> AST_id var
+  | PT_nt ("F", [PT_num num]) -> AST_num num
+  | PT_nt ("F", [PT_term "("; expr; PT_term ")"]) ->
+		-> ast_ize_expr expr (* probably have to put this in a list *)
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr")
 
 and ast_ize_reln_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
-  (* lhs in an inheritec attribute.
+  (* lhs in an inherited attribute.
      tail is an ET parse tree node *)
   match tail with
   (*
