@@ -551,13 +551,13 @@ and ast_e =
 
 let rec ast_ize_P (p:parse_tree) : ast_sl =
   match p with
-  | PT_nt ("P", sl :: []) -> ast_ize_SL sl
+  | PT_nt ("P", sl :: [PT_term "$$"]) -> ast_ize_SL sl
   | _ -> raise (Failure "malformed parse tree in ast_ize_P")
 
 and ast_ize_SL (sl:parse_tree) : ast_sl =
   match sl with
   | PT_nt ("SL", []) -> []
-  | PT_nt ("SL", s :: tl) -> (ast_ize_S s) :: (ast_ize_SL tl)
+  | PT_nt ("SL", s :: tl) -> (ast_ize_S s) @ [(ast_ize_SL tl)]
   | _ -> raise (Failure "malformed parse tree in ast_ize_SL")
 
 and ast_ize_S (s:parse_tree) : ast_s =
