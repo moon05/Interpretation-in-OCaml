@@ -589,7 +589,7 @@ and ast_ize_expr (e:parse_tree) : ast_e =
 		-> ast_ize_expr_tail (ast_ize_expr fact) fact_tail
   | PT_nt ("F", [PT_id var]) -> AST_id var
   | PT_nt ("F", [PT_num num]) -> AST_num num
-  | PT_nt ("F", [PT_term "("; expr; PT_term ")"]) ->
+  | PT_nt ("F", [PT_term "("; expr; PT_term ")"])
 		-> ast_ize_expr expr (* probably have to put this in a list *)
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr")
 
