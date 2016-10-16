@@ -1,0 +1,5 @@
+*.cmi
+*.cmxa
+*.cmo
+*.out
+.DS_Store
