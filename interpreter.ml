@@ -597,9 +597,15 @@ and ast_ize_reln_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
   (* lhs in an inherited attribute.
      tail is an ET parse tree node *)
   match tail with
-  (*
-     your code here ...
-  *)
+  | PT_nt ("ET", [])
+        -> []
+  | PT_nt ("ET", [PT_nt ("ro", ro); expr])
+        ->
+        (match ro with
+        | "==" | "<>" | "<" | ">" | "<=" | ">="
+              -> AST_binop (ro, lhs, (ast_ize_expr expr))
+        | _ -> raise (Failure "malformed parse tree in ro") )
+
   | _ -> raise (Failure "malformed parse tree in ast_ize_reln_tail")
 
 and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
