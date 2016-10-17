@@ -731,16 +731,16 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
   | AST_binop (binop, e1, e2) ->
 		let evaluate op v1 v2 = 
 			match op with
-			| "==" -> v1 = v2
-			| "<>" -> v1 <> v2
-			| "<" -> v1 < v2
-			| ">" -> v1 > v2
-			| "<=" -> v1 <= v2
-			| ">=" -> v1 >= v2
-			| "+" -> v1 + v2
-			| "-" -> v1 - v2
-			| "*" -> v1 * v2
-			| "/" -> v1 / v2 in
+			| "==" ->	int_of_bool (v1 = v2)
+			| "<>" ->	int_of_bool (v1 <> v2)
+			| "<" ->	int_of_bool (v1 < v2)
+			| ">" ->	int_of_bool (v1 > v2)
+			| "<=" ->	int_of_bool (v1 <= v2)
+			| ">=" ->	int_of_bool (v1 >= v2)
+			| "+" ->	v1 + v2
+			| "-" ->	v1 - v2
+			| "*" ->	v1 * v2
+			| "/" ->	v1 / v2 in
 		(Value (evaluate binop (interpret_expr e1 mem) (interpret_expr e2 mem)), mem)
   | AST_num(num) -> (Value int_of_string(num), mem)
   | AST_id(var) ->
