@@ -666,8 +666,14 @@ and interpret_sl (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
     (*  ok?   new_mem   new_input     new_output *)
-  (* your code should replace the following line *)
-  (Good, mem, inp, outp)
+  match sl with
+  | [] -> (Good, mem, inp, outp)
+  | s::tl ->
+		let (status, new_mem, new_inp, new_outp) = (interpret_s s mem inp outp) in
+		match status with
+		| Good | Done -> interpret_sl tl new_mem new_inp new_outp
+		| _ -> (Bad, new_mem, new_inp, new_outp)
+  | _ (Bad, mem, inp, outp)
 
 (* NB: the following routine is complete.  You can call it on any
    statement node and it figures out what more specific case to invoke.
