@@ -694,7 +694,21 @@ and interpret_assign (lhs:string) (rhs:ast_e) (mem:memory)
                      (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   (* your code should replace the following line *)
-  (Good, mem, inp, outp)
+  let rec helper (var:string) (num:int) (l:memory) (m:memory)
+    : memory =
+    match mem with
+    |[]
+        -> l @ [(lhs,num)]
+    |(lhs,_)::tl
+        -> l @ [(lhs,num)] @ tl
+    |hd::tl
+        -> helper lhs num (l@[hd]) tl in
+
+  match (interpret_expr rhs mem) with
+  | (Error _, newmem)-> (Bad, newmem, inp, outp)
+  | (Value num, newmem)
+      -> (Good, (helper lhs num [] newmem), inp, outp)
+
 
 and interpret_read (id:string) (mem:memory)
                    (inp:string list) (outp:string list)
