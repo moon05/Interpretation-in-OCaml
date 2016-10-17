@@ -729,6 +729,7 @@ and interpret_check (cond:ast_e) (mem:memory)
 and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
   match expr with
   | AST_binop (binop, e1, e2) ->
+		let int_of_bool num = if num then 1 else 0 in
 		let evaluate op v1 v2 = 
 			match op with
 			| "==" ->	int_of_bool (v1 = v2)
@@ -740,15 +741,24 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 			| "+" ->	v1 + v2
 			| "-" ->	v1 - v2
 			| "*" ->	v1 * v2
-			| "/" ->	v1 / v2 in
-		(Value (evaluate binop (interpret_expr e1 mem) (interpret_expr e2 mem)), mem)
-  | AST_num(num) -> (Value int_of_string(num), mem)
+			| "/" ->	v1 / v2
+			| _ -> raise (Failure "invalid operator") in
+		let get_val ex =
+			match (interpret_expr ex mem) with
+			| (Value num, _) -> num
+			| (Error str, _) -> raise (Failure str) in
+		(try
+			let ret = evaluate binop (get_val e1) (get_val e2) in
+			(Value ret, mem)
+		with
+		| Failure str -> (Error str, mem))
+  | AST_num(str) -> (Value (int_of_string str), mem)
   | AST_id(var) ->
 		try
-			let (_, ans) = (find (fun (str, num) -> str = var) mem)
+			let (_, ans) = (find (fun (str, num) -> str = var) mem) in
 			(Value ans, mem)
 		with
-		Not_found -> (Error "variable not found", mem)
+		| Not_found -> (Error "variable not found", mem)
 
 (*******************************************************************
     Testing
