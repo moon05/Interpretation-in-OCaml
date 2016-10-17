@@ -727,8 +727,24 @@ and interpret_check (cond:ast_e) (mem:memory)
   (Done, mem, inp, outp)
 
 and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
-  (* your code should replace the following line *)
-  (Error("code not written yet"), mem)
+  match expr with
+  | AST_binop (binop, expr1, expr2) ->
+		let (v1, v2) = ((interpret_expr expr1 mem), (interpret_expr expr2 mem))
+		match binop with
+		| "==" -> v1 = v2
+		| "<>" -> v1 <> v2
+		| "<" -> v1 < v2
+		| ">" -> v1 > v2
+		| "<=" -> v1 <= v2
+		| ">=" -> v1 >= v2
+		| "+" -> v1 + v2
+		| "-" -> v1 - v2
+		| "*" -> v1 * v2
+		| "/" -> v1 / v2
+  | AST_num(num) -> int_of_string(num)
+  | AST_id(var) ->
+		try (find (fun (str, num) -> str = var) mem) with
+		Not_found -> raise (Failure "variable not found")
 
 (*******************************************************************
     Testing
