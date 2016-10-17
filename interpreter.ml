@@ -613,14 +613,14 @@ and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
 		->
         (match ao with
 		| "+" | "-"
-				 -> AST_binop (ao, lhs, (ast_ize_expr_tail (ast_ize_expr t) tt))
+				 -> (ast_ize_expr_tail (AST_binop (ao, lhs, (ast_ize_expr t))) tt)
 		| _ -> raise (Failure "malformed in parse tree ao"))
   | PT_nt ("FT", []) -> lhs
   | PT_nt ("FT", [PT_nt ("mo", [PT_term mo]); f; ft])
 		->
 		(match mo with
 		| "*" | "/"
-			  -> AST_binop (mo, lhs, (ast_ize_expr_tail (ast_ize_expr f) ft))
+			  -> (ast_ize_expr_tail (AST_binop (mo, lhs, (ast_ize_expr f))) ft)
         | _ -> raise (Failure "malformed parse tree in mo"))
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
 ;;
@@ -737,10 +737,13 @@ let p = "
     read a
     read b
     read c
-    sum := ((a*b)+(b*c)+c*a))/3
+    sum := ((a*b)+(b*c)+(c*a))/3
     write sum";;
 
-parse ecg_parse_table p;;
+let q = "
+	sum := a + c * b * d";;
+	
+ast_ize_P (parse ecg_parse_table q);;
 
 let main () =
 
