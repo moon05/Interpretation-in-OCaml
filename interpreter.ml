@@ -574,6 +574,8 @@ and ast_ize_S (s:parse_tree) : ast_s =
         -> AST_do (ast_ize_SL sl)
   | PT_nt ("S", [PT_term "check"; expr])
         -> AST_check (ast_ize_expr expr)
+  | PT_nt ("S", [PT_error])
+		-> AST_error
   | _ -> raise (Failure "malformed parse tree in ast_ize_S")
 
 and ast_ize_expr (e:parse_tree) : ast_e =
