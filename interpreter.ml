@@ -744,7 +744,6 @@ and interpret_if (cond:ast_e) (sl:ast_sl) (mem:memory)
 and interpret_do (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
   match (interpret_sl sl mem inp outp) with
   | (Good, n_mem, n_inp, n_outp) -> (interpret_do sl n_mem n_inp n_outp)
   | (Bad, _, n_inp, n_outp) -> (Bad, mem, n_inp, n_outp)
@@ -753,8 +752,11 @@ and interpret_do (sl:ast_sl) (mem:memory)
 and interpret_check (cond:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
-  (Done, mem, inp, outp)
+  match (interpret_expr cond mem) with
+  | (Value 0, _) -> (Done, mem, inp, outp)
+  | (Value 1, _) -> (Good, mem, inp, outp)
+  | (Value _, _) -> (Bad, mem, inp, (outp@["non boolean expression"]))
+  | _ -> (Bad, mem, inp, outp)
 
 and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
   match expr with
