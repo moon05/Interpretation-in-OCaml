@@ -658,14 +658,29 @@ type status =
    for valid integer format.
 *)
 
-let rec add_to_mem (var:string) (num:int) (l:memory) (mem:memory)
+(*
+ * add_to_mem()
+ * Description:
+ *   Recursively searches through memory until it finds an entry that is a tuple
+ *   containing the string 'var', and creates a new list where tuple has been
+ *   assigned a the given value. If no entry is found, a new entry is created and
+ *   appended to the list.
+ * Arguments:
+ *   var - variable to look for in memory
+ *   num - integer value to be assigned to 'var'
+ *   lst - new memory list being created
+ *   mem - currently visible memory
+ * Return Value:
+ *   memory - new list of variables in memory
+ *)
+let rec add_to_mem (var:string) (num:int) (lst:memory) (mem:memory)
     : memory =
     match mem with
-    | [] -> l @ [(var,num)]
+    | [] -> lst @ [(var,num)]
     | (var,_)::tl
-        -> l @ [(var,num)] @ tl
+        -> lst @ [(var,num)] @ tl
     | hd::tl
-        -> add_to_mem var num (l@[hd]) tl
+        -> add_to_mem var num (lst @ [hd]) tl
 
 
 let rec interpret (ast:ast_sl) (full_input:string) : string =
@@ -673,18 +688,34 @@ let rec interpret (ast:ast_sl) (full_input:string) : string =
   let (_, _, _, outp) = interpret_sl ast [] inp [] in
     (fold_left (str_cat " ") "" outp) ^ "\n"
 
+(*
+ * interpret_sl()
+ * Description:
+ *   Recursively interprets a statement list by examining the current head of the
+ *   list and interpreting the statement. Since memory could have been modified by
+ *   the executed statement, we pass in the new memory to the recursive call so that
+ *   it can see everything that has been declared within the scope of the current list
+ *   and have an udpdated view of the current values assigned to variables.
+ * Arguments:
+ *   sl - statement list
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *)
 and interpret_sl (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-    (*  ok?   new_mem   new_input     new_output *)
   match sl with
   | [] -> (Good, mem, inp, outp)
   | s::tl ->
 		let (status, new_mem, new_inp, new_outp) = (interpret_s s mem inp outp) in
 		match status with
+		(* Need to check if memory has updated known variables *)
 		| Good -> interpret_sl tl new_mem new_inp new_outp
-    | Done -> (Done, mem, new_inp, new_outp)
-		| _ -> (Bad, new_mem, new_inp, new_outp)
+		| Done -> (Done, mem, new_inp, new_outp)
+		| Bad -> (Bad, new_mem, new_inp, new_outp)
   | _ -> (Bad, mem, inp, outp)
 
 (* NB: the following routine is complete.  You can call it on any
@@ -702,60 +733,161 @@ and interpret_s (s:ast_s) (mem:memory)
   | AST_check(cond)      -> interpret_check cond mem inp outp
   | AST_error            -> raise (Failure "cannot interpret erroneous tree")
 
+(*
+ * interpret_assign()
+ * Description:
+ *   Searches for an entry corresponding to the specified variable and assigns a
+ *   value to the entry. If no entry exists, then an entry for the variable will be
+ *   created.
+ * Arguments:
+ *   lhs - variable to assign a value to
+ *   rhs - expression to evaluate and assign to the specified variable
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *)
 and interpret_assign (lhs:string) (rhs:ast_e) (mem:memory)
                      (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr rhs mem) with
-  | (Error _, newmem)-> (Bad, newmem, inp, outp)
-  | (Value num, newmem)
-      -> (Good, (add_to_mem lhs num [] newmem), inp, outp)
+  | (Error _, new_mem) -> (Bad, new_mem, inp, outp)
+  | (Value num, new_mem) -> (Good, (add_to_mem lhs num [] new_mem), inp, outp)
 
-
+(*
+ * interpret_read()
+ * Description:
+ *   Searches for an entry corresponding to the specified variable and assigns the
+ *   first value in the list of inputs to it.
+ * Arguments:
+ *   id - variable to store the obtained input in
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *)
 and interpret_read (id:string) (mem:memory)
                    (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match inp with
   | [] -> (Bad, mem, inp, (outp@["unexpected end of input"]))
-  | hd::tl
-      -> 
-      try
+  | hd::tl ->
+	(* catches an input mismatch and returns a state with a 'Bad' status
+	   error message placed in list of outputs
+	*)
+	try
 		(Good, (add_to_mem id (int_of_string hd) [] mem), tl, outp)
-      with
-      | Failure _ -> (Bad, mem, inp, (outp@["non-numeric input"]))
+	with
+	| Failure _ -> (Bad, mem, inp, (outp @ ["non-numeric input"]))
 
-
+(*
+ * interpret_write()
+ * Description:
+ *   Evaluates the given expression and displays the output
+ * Arguments:
+ *   expr - expression to be evaluated and displayed
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *)
 and interpret_write (expr:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr expr mem) with
   | (Error str, _) -> (Bad, mem, inp, (outp @ [str]))
-  | (Value num, _)
-      -> (Good, mem, inp, (outp @ [(string_of_int num)]))
+  | (Value num, _) -> (Good, mem, inp, (outp @ [(string_of_int num)]))
 
+(*
+ * interpret_if()
+ * Description:
+ *   Evaluates the given expression (interpreted as a condition) and if its value is
+ *   1 (true), then the list of statements inside the block are also interpreted. If
+ *   the value returned is 0 (false), then the block is ignored. Non-boolean
+ *   expressions will result in an error.
+ * Arguments:
+ *   cond - condition to be evaluated to decide whether the set of statements will
+ *          be executed
+ *   sl - statement list containing the body of the conditional block
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *)  
 and interpret_if (cond:ast_e) (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr cond mem) with
   | (Value 0, _) -> (Good, mem, inp, outp)
-  | (Value 1, _) -> (interpret_sl sl mem inp outp)
+  | (Value 1, _) -> interpret_sl sl mem inp outp
   | (Value _, _) -> (Bad, mem, inp, (outp@["non boolean expression"]))
   | _ -> (Bad, mem, inp, outp)
 
+(*
+ * interpret_do()
+ * Description:
+ *   Repeatedly evaluates the statement list until either an error occurs or a check
+ *   fails.
+ * Arguments:
+ *   sl - statement list containing the body of the block
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *) 
 and interpret_do (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
   match (interpret_sl sl mem inp outp) with
-  | (Good, n_mem, n_inp, n_outp) -> (interpret_do sl n_mem n_inp n_outp)
-  | (Bad, _, n_inp, n_outp) -> (Bad, mem, n_inp, n_outp)
-  | (Done, _, n_inp, n_outp) -> (Good, mem, n_inp, n_outp)
+  | (Good, new_mem, new_inp, new_outp) -> interpret_do sl new_mem new_inp new_outp
+  | (Bad, _, new_inp, new_outp) -> (Bad, mem, new_inp, new_outp)
+  | (Done, _, new_inp, new_outp) -> (Good, mem, new_inp, new_outp)
 
+(*
+ * interpret_check()
+ * Description:
+ *   Evaluates the given expression (interpreted as a condition) and if its value is
+ *   1 (true), the status is 'Good' indicating that the check passed. If the value is
+ *   0 (false), the status is 'Done' indicating that the check failed. Otherwise, a
+ *   'Bad' status is returned indicating that an error occurred.
+ * Arguments:
+ *   cond - condition to be evaluated to decide on what status to output
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *) 
 and interpret_check (cond:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
-  (Done, mem, inp, outp)
+  match (interpret_expr cond mem) with
+  | (Value 0, _) -> (Done, mem, inp, outp)
+  | (Value 1, _) -> (Good, mem, inp, outp)
+  | (Value _, _) -> (Bad, mem, inp, (outp@["non boolean expression"]))
+  | _ -> (Bad, mem, inp, outp)
 
+(*
+ * interpret_expr()
+ * Description:
+ *   Recursively evaluates an expression depending on what is at the top of the
+ *   current expression. Binary operators are evaluated by recursively obtaining the
+ *   values of the left and right children and performing the desired operation.
+ *   Number literals are parsed from strings to integers. Ids are searched for in
+ *   memory to return their current values.
+ * Arguments:
+ *   expr - expression to be evaluated
+ *   mem - current view of memory
+ *   inp - list of inputs
+ *   outp - list of outputs
+ * Return Value:
+ *   (status * memory * string list * string list) - current program state
+ *) 
 and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
   match expr with
   | AST_binop (binop, e1, e2) ->
@@ -784,15 +916,17 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 			(Value (evaluate binop (get_val e1) (get_val e2)), mem)
 		with
 		| Failure str -> (Error str, mem))
+  (* catch an input mismatch error and return an error message *)
   | AST_num(str) ->
 		(try
 			(Value (int_of_string str), mem)
 		with
 		| Failure _ -> (Error "non-numeric input", mem))
+  (* catch an input not found error and return an error message *)	
   | AST_id(var) ->
 		try
 			let (_, ans) = (find (fun (str, num) -> str = var) mem) in
-      (Value ans, mem)
+			(Value ans, mem)
 		with
 		| Not_found -> (Error "use of an uninitialized variable", mem)
 
