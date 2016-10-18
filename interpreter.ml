@@ -714,13 +714,13 @@ and interpret_read (id:string) (mem:memory)
                    (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match inp with
-  | [] -> (Bad, mem, inp, outp)
+  | [] -> (Bad, mem, inp, (outp@["unexpected end of input"]))
   | hd::tl
       -> 
       try
 		(Good, (add_to_mem id (int_of_string hd) [] mem), tl, outp)
       with
-      | Failure _ -> (Bad, mem, inp, outp)
+      | Failure _ -> (Bad, mem, inp, (outp@["non-numeric input"]))
 
 
 and interpret_write (expr:ast_e) (mem:memory)
@@ -764,7 +764,10 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 			| "+"	-> v1 + v2
 			| "-"	-> v1 - v2
 			| "*"	-> v1 * v2
-			| "/"	-> v1 / v2
+			| "/"	->
+				(match v2 with
+				| 0 -> raise (Failure "divide by zero")
+				| _ -> v1 / v2)
 			| _		-> raise (Failure "invalid operator") in
 		let get_val ex =
 			match (interpret_expr ex mem) with
@@ -778,13 +781,13 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 		(try
 			(Value (int_of_string str), mem)
 		with
-		| Failure _ -> (Error "non-alphanumeric input", mem))
+		| Failure _ -> (Error "non-numeric input", mem))
   | AST_id(var) ->
 		try
 			let (_, ans) = (find (fun (str, num) -> str = var) mem) in
       (Value ans, mem)
 		with
-		| Not_found -> (Error "variable not found", mem)
+		| Not_found -> (Error "use of an uninitialized variable", mem)
 
 (*******************************************************************
     Testing
