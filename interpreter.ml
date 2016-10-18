@@ -657,6 +657,17 @@ type status =
    whitespace-separated words, each of which is subsequently checked
    for valid integer format.
 *)
+
+let rec add_to_mem (var:string) (num:int) (l:memory) (mem:memory)
+    : memory =
+    match mem with
+    | [] -> l @ [(var,num)]
+    | (var,_)::tl
+        -> l @ [(var,num)] @ tl
+    | hd::tl
+        -> add_to_mem var num (l@[hd]) tl
+
+
 let rec interpret (ast:ast_sl) (full_input:string) : string =
   let inp = split (regexp "[ \t\n\r]+") full_input in
   let (_, _, _, outp) = interpret_sl ast [] inp [] in
@@ -693,28 +704,24 @@ and interpret_s (s:ast_s) (mem:memory)
 and interpret_assign (lhs:string) (rhs:ast_e) (mem:memory)
                      (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
-  let rec helper (var:string) (num:int) (l:memory) (m:memory)
-    : memory =
-    match mem with
-    |[]
-        -> l @ [(lhs,num)]
-    |(lhs,_)::tl
-        -> l @ [(lhs,num)] @ tl
-    |hd::tl
-        -> helper lhs num (l@[hd]) tl in
-
   match (interpret_expr rhs mem) with
   | (Error _, newmem)-> (Bad, newmem, inp, outp)
   | (Value num, newmem)
-      -> (Good, (helper lhs num [] newmem), inp, outp)
+      -> (Good, (add_to_mem lhs num [] newmem), inp, outp)
 
 
 and interpret_read (id:string) (mem:memory)
                    (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
-  (Good, mem, inp, outp)
+  match inp with
+  | [] -> (Bad, mem, inp, outp)
+  | hd::tl
+      -> 
+      try
+      (Good, (add_to_mem id (int_of_string hd) [] mem), tl, outp)
+      with
+      | Failure _ -> (Bad, mem, inp, outp)
+
 
 and interpret_write (expr:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
