@@ -682,7 +682,8 @@ and interpret_sl (sl:ast_sl) (mem:memory)
   | s::tl ->
 		let (status, new_mem, new_inp, new_outp) = (interpret_s s mem inp outp) in
 		match status with
-		| Good | Done -> interpret_sl tl new_mem new_inp new_outp
+		| Good -> interpret_sl tl new_mem new_inp new_outp
+    | Done -> (Done, mem, new_inp, new_outp)
 		| _ -> (Bad, new_mem, new_inp, new_outp)
   | _ -> (Bad, mem, inp, outp)
 
@@ -734,7 +735,6 @@ and interpret_write (expr:ast_e) (mem:memory)
 and interpret_if (cond:ast_e) (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
   match (interpret_expr cond mem) with
   | (Value 0, _) -> (Good, mem, inp, outp)
   | (Value 1, _) -> (interpret_sl sl mem inp outp)
@@ -745,7 +745,10 @@ and interpret_do (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   (* your code should replace the following line *)
-  (Good, mem, inp, outp)
+  match (interpret_sl sl mem inp outp) with
+  | (Good, n_mem, n_inp, n_outp) -> (interpret_do sl n_mem n_inp n_outp)
+  | (Bad, _, n_inp, n_outp) -> (Bad, mem, n_inp, n_outp)
+  | (Done, _, n_inp, n_outp) -> (Good, mem, n_inp, n_outp)
 
 and interpret_check (cond:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
