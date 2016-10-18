@@ -671,7 +671,7 @@ type status =
  *   lst - new memory list being created
  *   mem - currently visible memory
  * Return Value:
- *   memory - new list of variables in memory
+ *   memory - new list of variable, value pairs in memory
  *)
 let rec add_to_mem (id:string) (num:int) (lst:memory) (mem:memory) : memory =
    match mem with
@@ -679,6 +679,20 @@ let rec add_to_mem (id:string) (num:int) (lst:memory) (mem:memory) : memory =
    | (id, _)::tl -> lst @ [(id, num)] @ tl
    | hd::tl -> add_to_mem id num (lst @ [hd]) tl
 
+(*
+ * shrink_mem()
+ * Description:
+ *   Creates a new list (memory) based on the modified values stored in sub_mem for
+ *   ids that exist in mem. The new list will not include any variables created in
+ *   the scope of the sub procedure. The algorithm assumes the ids are stored in the
+ *   same order in sub_mem and mem
+ * Arguments:
+ *   lst - new memory list being created
+ *   sub_mem - memory returned by sub procedure
+ *   mem - currently visible memory
+ * Return Value:
+ *   memory - new list of variable, value pairs in memory
+ *)
 let rec shrink_mem (lst:memory) (sub_mem:memory) (mem:memory) : memory =
   match mem with
   | [] -> lst
