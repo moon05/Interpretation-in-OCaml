@@ -548,17 +548,44 @@ and ast_e =
 | AST_id of string
 | AST_num of string;;
 
+(*
+ * ast_ize_P()
+ * Description:
+ *   Takes in a parse tree and returns a statement list
+ * Arguments:
+ *   p - parse tree
+ * Return Value:
+ *   ast_sl - statement list
+ *)
 let rec ast_ize_P (p:parse_tree) : ast_sl =
   match p with
   | PT_nt ("P", [sl; PT_term "$$"]) -> ast_ize_SL sl
   | _ -> raise (Failure "malformed parse tree in ast_ize_P")
 
+(*
+ * ast_ize_SL()
+ * Description:
+ *   Takes in a parse tree and returns a statement list
+ * Arguments:
+ *   sl - parse tree
+ * Return Value:
+ *   ast_sl - statement list
+ *)
 and ast_ize_SL (sl:parse_tree) : ast_sl =
   match sl with
   | PT_nt ("SL", []) -> []
   | PT_nt ("SL", [s; tl]) -> (ast_ize_S s) :: (ast_ize_SL tl)
   | _ -> raise (Failure "malformed parse tree in ast_ize_SL")
 
+(*
+ * ast_ize_S()
+ * Description:
+ *   Takes in a parse tree and returns a statement
+ * Arguments:
+ *   s - parse tree
+ * Return Value:
+ *   ast_s - statement
+ *)
 and ast_ize_S (s:parse_tree) : ast_s =
   match s with
   | PT_nt ("S", [PT_id lhs; PT_term ":="; expr]) ->
@@ -577,6 +604,16 @@ and ast_ize_S (s:parse_tree) : ast_s =
 		AST_error
   | _ -> raise (Failure "malformed parse tree in ast_ize_S")
 
+
+(*
+ * ast_ize_expr()
+ * Description:
+ *   Takes in a parse tree and returns an expression
+ * Arguments:
+ *   e - parse tree
+ * Return Value:
+ *   ast_e - expression
+ *)
 and ast_ize_expr (e:parse_tree) : ast_e =
   (* e is an R, E, T, or F parse tree node *)
   match e with
@@ -592,6 +629,17 @@ and ast_ize_expr (e:parse_tree) : ast_e =
 		ast_ize_expr expr (* probably have to put this in a list *)
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr")
 
+
+(*
+ * ast_ize_reln_tail()
+ * Description:
+ *   Takes in an expression and a parse tree and returns an expression
+ * Arguments:
+ *   lhs - expression
+ *   tail - parse tree
+ * Return Value:
+ *   ast_e - expression
+ *)
 and ast_ize_reln_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
   (* lhs in an inherited attribute.
      tail is an ET parse tree node *)
@@ -604,6 +652,17 @@ and ast_ize_reln_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
         | _ -> raise (Failure "malformed parse tree in ro"))
   | _ -> raise (Failure "malformed parse tree in ast_ize_reln_tail")
 
+
+(*
+ * ast_ize_expr_tail()
+ * Description:
+ *   Takes in an expression and a parse tree and returns an expression
+ * Arguments:
+ *   lhs - expression
+ *   tail - parse tree
+ * Return Value:
+ *   ast_e - expression
+ *)
 and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
   (* lhs in an inherited attribute.
      tail is a TT or FT parse tree node *)
