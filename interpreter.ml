@@ -562,35 +562,35 @@ and ast_ize_SL (sl:parse_tree) : ast_sl =
 
 and ast_ize_S (s:parse_tree) : ast_s =
   match s with
-  | PT_nt ("S", [PT_id lhs; PT_term ":="; expr])
-        -> AST_assign (lhs, (ast_ize_expr expr))
-  | PT_nt ("S", [PT_term "read"; PT_id var])
-        -> AST_read var
-  | PT_nt ("S", [PT_term "write"; expr])
-        -> AST_write (ast_ize_expr expr)
-  | PT_nt ("S", [PT_term "if"; reln; sl; PT_term "fi"])
-        -> AST_if ((ast_ize_expr reln), (ast_ize_SL sl))
-  | PT_nt ("S", [PT_term "do"; sl; PT_term "od"])
-        -> AST_do (ast_ize_SL sl)
-  | PT_nt ("S", [PT_term "check"; expr])
-        -> AST_check (ast_ize_expr expr)
-  | PT_nt ("S", [PT_error])
-		-> AST_error
+  | PT_nt ("S", [PT_id lhs; PT_term ":="; expr]) ->
+		AST_assign (lhs, (ast_ize_expr expr))
+  | PT_nt ("S", [PT_term "read"; PT_id var]) ->
+		AST_read var
+  | PT_nt ("S", [PT_term "write"; expr]) ->
+		AST_write (ast_ize_expr expr)
+  | PT_nt ("S", [PT_term "if"; reln; sl; PT_term "fi"]) ->
+		AST_if ((ast_ize_expr reln), (ast_ize_SL sl))
+  | PT_nt ("S", [PT_term "do"; sl; PT_term "od"]) ->
+		AST_do (ast_ize_SL sl)
+  | PT_nt ("S", [PT_term "check"; expr]) ->
+		AST_check (ast_ize_expr expr)
+  | PT_nt ("S", [PT_error]) ->
+		AST_error
   | _ -> raise (Failure "malformed parse tree in ast_ize_S")
 
 and ast_ize_expr (e:parse_tree) : ast_e =
   (* e is an R, E, T, or F parse tree node *)
   match e with
-  | PT_nt ("R", [expr; expr_tail])
-		-> ast_ize_reln_tail (ast_ize_expr expr) expr_tail
-  | PT_nt ("E", [term; term_tail])
-		-> ast_ize_expr_tail (ast_ize_expr term) term_tail
-  | PT_nt ("T", [fact; fact_tail])
-		-> ast_ize_expr_tail (ast_ize_expr fact) fact_tail
+  | PT_nt ("R", [expr; expr_tail]) ->
+		ast_ize_reln_tail (ast_ize_expr expr) expr_tail
+  | PT_nt ("E", [term; term_tail]) ->
+		ast_ize_expr_tail (ast_ize_expr term) term_tail
+  | PT_nt ("T", [fact; fact_tail]) ->
+		ast_ize_expr_tail (ast_ize_expr fact) fact_tail
   | PT_nt ("F", [PT_id var]) -> AST_id var
   | PT_nt ("F", [PT_num num]) -> AST_num num
-  | PT_nt ("F", [PT_term "("; expr; PT_term ")"])
-		-> ast_ize_expr expr (* probably have to put this in a list *)
+  | PT_nt ("F", [PT_term "("; expr; PT_term ")"]) ->
+		ast_ize_expr expr (* probably have to put this in a list *)
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr")
 
 and ast_ize_reln_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
@@ -598,11 +598,10 @@ and ast_ize_reln_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
      tail is an ET parse tree node *)
   match tail with
   | PT_nt ("ET", []) -> lhs
-  | PT_nt ("ET", [PT_nt ("ro", [PT_term ro]); expr])
-        ->
+  | PT_nt ("ET", [PT_nt ("ro", [PT_term ro]); expr]) ->
         (match ro with
-        |"==" | "<>" | "<" | ">" | "<=" | ">="
-				-> AST_binop (ro, lhs, (ast_ize_expr expr))
+        |"==" | "<>" | "<" | ">" | "<=" | ">=" ->
+			AST_binop (ro, lhs, (ast_ize_expr expr))
         | _ -> raise (Failure "malformed parse tree in ro"))
   | _ -> raise (Failure "malformed parse tree in ast_ize_reln_tail")
 
@@ -611,18 +610,16 @@ and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
      tail is a TT or FT parse tree node *)
   match tail with
   | PT_nt ("TT", []) -> lhs
-  | PT_nt ("TT", [PT_nt ("ao", [PT_term ao]); t; tt])
-		->
+  | PT_nt ("TT", [PT_nt ("ao", [PT_term ao]); t; tt]) ->
         (match ao with
-		| "+" | "-"
-				 -> (ast_ize_expr_tail (AST_binop (ao, lhs, (ast_ize_expr t))) tt)
+		| "+" | "-" ->
+			ast_ize_expr_tail (AST_binop (ao, lhs, (ast_ize_expr t))) tt
 		| _ -> raise (Failure "malformed in parse tree ao"))
   | PT_nt ("FT", []) -> lhs
-  | PT_nt ("FT", [PT_nt ("mo", [PT_term mo]); f; ft])
-		->
+  | PT_nt ("FT", [PT_nt ("mo", [PT_term mo]); f; ft]) ->
 		(match mo with
-		| "*" | "/"
-			  -> (ast_ize_expr_tail (AST_binop (mo, lhs, (ast_ize_expr f))) ft)
+		| "*" | "/" ->
+			  ast_ize_expr_tail (AST_binop (mo, lhs, (ast_ize_expr f))) ft
         | _ -> raise (Failure "malformed parse tree in mo"))
   | _ -> raise (Failure "malformed parse tree in ast_ize_expr_tail")
 ;;
@@ -676,8 +673,13 @@ type status =
 let rec add_to_mem (id:string) (num:int) (lst:memory) (mem:memory) : memory =
    match mem with
    | [] -> lst @ [(id, num)]
-   | (id, _)::tl -> lst @ [(id, num)] @ tl
-   | hd::tl -> add_to_mem id num (lst @ [hd]) tl
+   | hd::tl ->
+		match hd with
+		| (name, _) ->
+			if (name = id) then
+				(lst @ [(id, num)]) @ tl
+			else
+				add_to_mem id num (lst @ [hd]) tl
 
 (*
  * shrink_mem()
@@ -698,6 +700,7 @@ let rec shrink_mem (lst:memory) (sub_mem:memory) (mem:memory) : memory =
   | [] -> lst
   | _::tl ->
 		match sub_mem with
+		| [] -> raise (Failure "unexpected end of memory")
 		| sub_hd::sub_tl -> shrink_mem (lst @ [sub_hd]) sub_tl tl
 
 let rec interpret (ast:ast_sl) (full_input:string) : string =
@@ -728,11 +731,10 @@ and interpret_sl (sl:ast_sl) (mem:memory)
   | [] -> (Good, mem, inp, outp)
   | s::tl ->
 		let (status, new_mem, new_inp, new_outp) = (interpret_s s mem inp outp) in
-		match status with
+		(match status with
 		| Good -> interpret_sl tl new_mem new_inp new_outp
 		| Done -> (Done, mem, new_inp, new_outp)
-		| Bad -> (Bad, new_mem, new_inp, new_outp)
-  | _ -> (Bad, mem, inp, outp)
+		| Bad -> (Bad, new_mem, new_inp, new_outp))
 
 (* NB: the following routine is complete.  You can call it on any
    statement node and it figures out what more specific case to invoke.
@@ -947,7 +949,7 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 			let (_, ans) = (find (fun (str, num) -> str = id) mem) in
 			(Value ans, mem)
 		with
-		| Not_found -> (Error "use of an uninitialized variable", mem)
+		| Not_found -> (Error (id ^ ": symbol not found"), mem)
 
 (*******************************************************************
     Testing
