@@ -718,7 +718,7 @@ and interpret_read (id:string) (mem:memory)
   | hd::tl
       -> 
       try
-      (Good, (add_to_mem id (int_of_string hd) [] mem), tl, outp)
+		(Good, (add_to_mem id (int_of_string hd) [] mem), tl, outp)
       with
       | Failure _ -> (Bad, mem, inp, outp)
 
@@ -755,32 +755,33 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 		let int_of_bool num = if num then 1 else 0 in
 		let evaluate op v1 v2 = 
 			match op with
-			| "==" ->	int_of_bool (v1 = v2)
-			| "<>" ->	int_of_bool (v1 <> v2)
-			| "<" ->	int_of_bool (v1 < v2)
-			| ">" ->	int_of_bool (v1 > v2)
-			| "<=" ->	int_of_bool (v1 <= v2)
-			| ">=" ->	int_of_bool (v1 >= v2)
-			| "+" ->	v1 + v2
-			| "-" ->	v1 - v2
-			| "*" ->	v1 * v2
-			| "/" ->	v1 / v2
-			| _ -> raise (Failure "invalid operator") in
+			| "=="	-> int_of_bool (v1 = v2)
+			| "<>"	-> int_of_bool (v1 <> v2)
+			| "<"	-> int_of_bool (v1 < v2)
+			| ">"	-> int_of_bool (v1 > v2)
+			| "<="	-> int_of_bool (v1 <= v2)
+			| ">="	-> int_of_bool (v1 >= v2)
+			| "+"	-> v1 + v2
+			| "-"	-> v1 - v2
+			| "*"	-> v1 * v2
+			| "/"	-> v1 / v2
+			| _		-> raise (Failure "invalid operator") in
 		let get_val ex =
 			match (interpret_expr ex mem) with
 			| (Value num, _) -> num
 			| (Error str, _) -> raise (Failure str) in
 		(try
-			let ret = evaluate binop (get_val e1) (get_val e2) in
-			(Value ret, mem)
+			(Value (evaluate binop (get_val e1) (get_val e2)), mem)
 		with
 		| Failure str -> (Error str, mem))
-  | AST_num(str) -> (Value (int_of_string str), mem)
-  (* do try catch here for ast_num*)
+  | AST_num(str) ->
+		try
+			(Value (int_of_string str), mem)
+		with
+		| Failure _ -> (Error "non-alphanumeric input")
   | AST_id(var) ->
 		try
-			let (_, ans) = (find (fun (str, num) -> str = var) mem) in
-			(Value ans, mem)
+			(Value (find (fun (str, num) -> str = var) mem), mem)
 		with
 		| Not_found -> (Error "variable not found", mem)
 
