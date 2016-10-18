@@ -775,13 +775,14 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 		with
 		| Failure str -> (Error str, mem))
   | AST_num(str) ->
-		try
+		(try
 			(Value (int_of_string str), mem)
 		with
-		| Failure _ -> (Error "non-alphanumeric input")
+		| Failure _ -> (Error "non-alphanumeric input", mem))
   | AST_id(var) ->
 		try
-			(Value (find (fun (str, num) -> str = var) mem), mem)
+			let (_, ans) = (find (fun (str, num) -> str = var) mem) in
+      (Value ans, mem)
 		with
 		| Not_found -> (Error "variable not found", mem)
 
