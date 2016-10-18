@@ -10,7 +10,6 @@
     Alternatively, can be "#use"-ed (or compiled and then "#load"-ed)
     into the top-level interpreter,
  *******************************************************************)
-#load "str.cma";;
 
 open List;;
 (* The List library includes a large collection of useful functions.
