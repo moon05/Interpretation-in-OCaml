@@ -726,8 +726,10 @@ and interpret_read (id:string) (mem:memory)
 and interpret_write (expr:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
     : status * memory * string list * string list =
-  (* your code should replace the following line *)
-  (Good, mem, inp, outp)
+  match (interpret_expr expr mem) with
+  | (Error str, _) -> (Bad, mem, inp, (outp @ [str]))
+  | (Value num, _)
+      -> (Good, mem, inp, (outp @ [(string_of_int num)]))
 
 and interpret_if (cond:ast_e) (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
@@ -774,6 +776,7 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 		with
 		| Failure str -> (Error str, mem))
   | AST_num(str) -> (Value (int_of_string str), mem)
+  (* do try catch here for ast_num*)
   | AST_id(var) ->
 		try
 			let (_, ans) = (find (fun (str, num) -> str = var) mem) in
