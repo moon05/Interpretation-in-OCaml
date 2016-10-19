@@ -686,7 +686,7 @@ and ast_ize_expr_tail (lhs:ast_e) (tail:parse_tree) : ast_e =
     Interpreter
  *******************************************************************)
 
-type memory = (string * int) list;;
+type memory = (string * int * bool) list;;
 (*             name   * val        *)
 (* If you do the extra credit, you might want an extra Boolean
    field in the tuple to indicate whether the value has been used. *)
@@ -730,14 +730,34 @@ type status =
  *)
 let rec add_to_mem (id:string) (num:int) (lst:memory) (mem:memory) : memory =
    match mem with
-   | [] -> lst @ [(id, num)]
+   | [] -> lst @ [(id, num, false)]
    | hd::tl ->
 		match hd with
-		| (name, _) ->
+		| (name, _, used) ->
 			if (name = id) then
-				(lst @ [(id, num)]) @ tl
+				(lst @ [(id, num, used)]) @ tl
 			else
 				add_to_mem id num (lst @ [hd]) tl
+
+let rec set_used (id:string) (used:bool) (lst:memory) (mem:memory) : memory =
+   match mem with
+   | [] -> raise Not_found
+   | hd::tl ->
+		match hd with
+		| (name, num, _) ->
+			if (name = id) then
+				(lst @ [(id, num, used)]) @ tl
+			else
+				set_used id used (lst @ [hd]) tl
+
+let rec check_if_used (mem:memory) (outp:string list) : string list =
+	match mem with
+	| [] -> outp
+	| (id, _, used)::tl ->
+		if (used) then
+			check_if_used tl outp
+		else
+			check_if_used tl (outp @ [id ^": symbol is never used"])
 
 (*
  * shrink_mem()
@@ -753,18 +773,21 @@ let rec add_to_mem (id:string) (num:int) (lst:memory) (mem:memory) : memory =
  * Return Value:
  *   memory - new list of variable, value pairs in memory
  *)
-let rec shrink_mem (lst:memory) (sub_mem:memory) (mem:memory) : memory =
+let rec shrink_mem (lst:memory) (sub_mem:memory) (mem:memory) (outp:string list)
+	: (memory * string list) =
   match mem with
-  | [] -> lst
+  | [] ->
+		(lst, check_if_used sub_mem outp)
   | _::tl ->
 		match sub_mem with
 		| [] -> raise (Failure "unexpected end of memory")
-		| sub_hd::sub_tl -> shrink_mem (lst @ [sub_hd]) sub_tl tl
+		| sub_hd::sub_tl -> shrink_mem (lst @ [sub_hd]) sub_tl tl outp
 
 let rec interpret (ast:ast_sl) (full_input:string) : string =
   let inp = split (regexp "[ \t\n\r]+") full_input in
-  let (_, _, _, outp) = interpret_sl ast [] inp [] in
-    (fold_left (str_cat " ") "" outp) ^ "\n"
+  let (_, mem, _, outp) = interpret_sl ast [] inp [] in
+  let new_outp = check_if_used mem outp in
+  (fold_left (str_cat " ") "" new_outp) ^ "\n"
 
 (*
  * interpret_sl()
@@ -874,8 +897,8 @@ and interpret_write (expr:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr expr mem) with
-  | (Error str, _) -> (Bad, mem, inp, (outp @ [str]))
-  | (Value num, _) -> (Good, mem, inp, (outp @ [(string_of_int num)]))
+  | (Error str, new_mem) -> (Bad, new_mem, inp, (outp @ [str]))
+  | (Value num, new_mem) -> (Good, new_mem, inp, (outp @ [(string_of_int num)]))
 
 (*
  * interpret_if()
@@ -898,12 +921,13 @@ and interpret_if (cond:ast_e) (sl:ast_sl) (mem:memory)
                  (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr cond mem) with
-  | (Value 0, _) -> (Good, mem, inp, outp)
-  | (Value 1, _) ->
-		let (status, new_mem, new_inp, new_outp) = (interpret_sl sl mem inp outp) in
-		(status, (shrink_mem [] new_mem mem), new_inp, new_outp)
-  | (Value _, _) -> (Bad, mem, inp, (outp @ ["non boolean expression"]))
-  | _ -> (Bad, mem, inp, outp)
+  | (Value 0, new_mem) -> (Good, new_mem, inp, outp)
+  | (Value 1, new_mem) ->
+		let (status, new_mem2, new_inp, new_outp) = (interpret_sl sl new_mem inp outp) in
+		let (new_mem3, new_outp2) = (shrink_mem [] new_mem2 new_mem new_outp) in
+		(status, new_mem3, new_inp, new_outp2)
+  | (Value _, new_mem) -> (Bad, new_mem, inp, (outp @ ["non boolean expression"]))
+  | (_, new_mem) -> (Bad, new_mem, inp, outp)
 
 (*
  * interpret_do()
@@ -923,9 +947,10 @@ and interpret_do (sl:ast_sl) (mem:memory)
     : status * memory * string list * string list =
   match (interpret_sl sl mem inp outp) with
   | (Good, new_mem, new_inp, new_outp) -> interpret_do sl new_mem new_inp new_outp
-  | (Bad, _, new_inp, new_outp) -> (Bad, mem, new_inp, new_outp)
+  | (Bad, new_mem, new_inp, new_outp) -> (Bad, new_mem, new_inp, new_outp)
   | (Done, new_mem, new_inp, new_outp) ->
-	(Good, (shrink_mem [] new_mem mem), new_inp, new_outp)
+	let (new_mem2, new_outp2) = (shrink_mem [] new_mem mem new_outp) in
+	(Good, new_mem2, new_inp, new_outp2)
 
 (*
  * interpret_check()
@@ -946,10 +971,10 @@ and interpret_check (cond:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr cond mem) with
-  | (Value 0, _) -> (Done, mem, inp, outp)
-  | (Value 1, _) -> (Good, mem, inp, outp)
-  | (Value _, _) -> (Bad, mem, inp, (outp @ ["non boolean expression"]))
-  | _ -> (Bad, mem, inp, outp)
+  | (Value 0, new_mem) -> (Done, new_mem, inp, outp)
+  | (Value 1, new_mem) -> (Good, new_mem, inp, outp)
+  | (Value _, new_mem) -> (Bad, new_mem, inp, (outp @ ["non boolean expression"]))
+  | (_, new_mem) -> (Bad, new_mem, inp, outp)
 
 (*
  * interpret_expr()
@@ -971,7 +996,7 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
   match expr with
   | AST_binop (binop, e1, e2) ->
 		let int_of_bool num = if num then 1 else 0 in
-		let evaluate op v1 v2 = 
+		let evaluate op v1 v2 : int = 
 			match op with
 			| "=="	-> int_of_bool (v1 = v2)
 			| "<>"	-> int_of_bool (v1 <> v2)
@@ -987,14 +1012,16 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
 				| 0 -> raise (Failure "divide by zero")
 				| _ -> v1 / v2)
 			| _		-> raise (Failure "invalid operator") in
-		let get_val ex =
-			match (interpret_expr ex mem) with
-			| (Value num, _) -> num
-			| (Error str, _) -> raise (Failure str) in
-		(try
-			(Value (evaluate binop (get_val e1) (get_val e2)), mem)
-		with
-		| Failure str -> (Error str, mem))
+		let (r1, new_mem) = (interpret_expr e1 mem) in
+		let (r2, new_mem2) = (interpret_expr e2 new_mem) in
+		(match (r1, r2) with
+		| (Error str, _) -> (Error str, new_mem2) 
+		| (_, Error str) -> (Error str, new_mem2)
+		| (Value v1, Value v2) ->
+			(try
+				(Value (evaluate binop v1 v2), new_mem2)
+			with
+			| Failure str -> (Error str, new_mem2)))
   (* catch an input mismatch error and return an error message *)
   | AST_num(str) ->
 		(try
@@ -1004,8 +1031,9 @@ and interpret_expr (expr:ast_e) (mem:memory) : value * memory =
   (* catch an input not found error and return an error message *)	
   | AST_id(id) ->
 		try
-			let (_, ans) = (find (fun (str, num) -> str = id) mem) in
-			(Value ans, mem)
+			let new_mem = set_used id true [] mem in
+			let (_, ans, _) = (find (fun (str, num, used) -> str = id) new_mem) in
+			(Value ans, new_mem)
 		with
 		| Not_found -> (Error (id ^ ": symbol not found"), mem)
 
@@ -1024,7 +1052,7 @@ let p = "
     read a
     read b
     read c
-    sum := ((a*b)+(b*c)+(c*a))/3
+    sum := a+b*2/3
     write sum";;
 
 let q = "
@@ -1036,6 +1064,8 @@ let main () =
 
   print_string (interpret sum_ave_syntax_tree "4 6");
     (* should print "10 5" *)
+  print_newline ();
+  print_string (interpret (ast_ize_P (parse ecg_parse_table p)) "3 2 4");
   print_newline ();
   print_string (interpret primes_syntax_tree "10");
     (* should print "2 3 5 7 11 13 17 19 23 29" *)
