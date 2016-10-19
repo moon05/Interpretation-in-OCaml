@@ -1097,8 +1097,6 @@ let main () =
   print_string (interpret sum_ave_syntax_tree "4 6");
     (* should print "10 5" *)
   print_newline ();
-  print_string (interpret (ast_ize_P (parse ecg_parse_table p)) "3 2 4");
-  print_newline ();
   print_string (interpret primes_syntax_tree "10");
     (* should print "2 3 5 7 11 13 17 19 23 29" *)
   print_newline ();
@@ -1111,8 +1109,15 @@ let main () =
   print_string (ecg_run "write foo" "");
     (* should print "foo: symbol not found" *)
   print_newline ();
-  print_string (ecg_run "read a read b" "3 4");
+  print_string (ecg_run "read a read b" "3");
     (* should print "unexpected end of input" *)
+  print_newline ();
+  
+  print_string (ecg_run "read a read b" "3 4");
+    (* should print "WARNING: 'a' symbol is never used WARNING: 'b' symbol is never used" *)
+  print_newline ();
+  print_string (interpret (ast_ize_P (parse ecg_parse_table p)) "3 2 4");
+    (* 4 WARNING: 'c' symbol is never used *)
   print_newline ();;
 
 (* Execute function "main" iff run as a stand-alone program. *)
