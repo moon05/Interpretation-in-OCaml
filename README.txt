@@ -21,7 +21,7 @@ Description:
 		  by storing them all into one list
 	
 	Interpret functions
-		- These were the functions that took the AST_ize as input and then interpreted
+		- These were the functions that took an AST as input and then interpreted
 		  the program.
 		- Most of the functions output a tuple of status code, a memory list, an input
 		  list and an output list.
