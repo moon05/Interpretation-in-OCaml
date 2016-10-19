@@ -717,12 +717,12 @@ type status =
  * add_to_mem()
  * Description:
  *   Recursively searches through memory until it finds an entry that is a tuple
- *   containing the string 'var', and creates a new list where tuple has been
- *   assigned a the given value. If no entry is found, a new entry is created and
+ *   containing the string 'id', and creates a new list where tuple has been
+ *   assigned the given value. If no entry is found, a new entry is created and
  *   appended to the list.
  * Arguments:
  *   id - variable to look for in memory
- *   num - integer value to be assigned to 'var'
+ *   num - integer value to be assigned to 'id'
  *   lst - new memory list being created
  *   mem - currently visible memory
  * Return Value:
@@ -739,6 +739,20 @@ let rec add_to_mem (id:string) (num:int) (lst:memory) (mem:memory) : memory =
 			else
 				add_to_mem id num (lst @ [hd]) tl
 
+(*
+ * set_used()
+ * Description:
+ *   Recursively searches through memory until it finds an entry that is a tuple
+ *   containing the string 'id', and creates a new list where tuple has been
+ *   modified to indicate whether it has been used yet or not
+ * Arguments:
+ *   id - variable to look for in memory
+ *   used - boolean indicating whether the variable has been used
+ *   lst - new memory list being created
+ *   mem - currently visible memory
+ * Return Value:
+ *   memory - new list of variable, value pairs in memory
+ *)
 let rec set_used (id:string) (used:bool) (lst:memory) (mem:memory) : memory =
    match mem with
    | [] -> raise Not_found
@@ -750,6 +764,17 @@ let rec set_used (id:string) (used:bool) (lst:memory) (mem:memory) : memory =
 			else
 				set_used id used (lst @ [hd]) tl
 
+(*
+ * check_if_used()
+ * Description:
+ *   Recursively searches through memory until to determine whether it should add
+ *   warnings to the output if a variable was declared but was never used.
+ * Arguments:
+ *   mem - currently visible memory
+ *   outp - list of outputs
+ * Return Value:
+ *   string list - new list of output messages
+ *)
 let rec check_if_used (mem:memory) (outp:string list) : string list =
 	match mem with
 	| [] -> outp
@@ -757,7 +782,7 @@ let rec check_if_used (mem:memory) (outp:string list) : string list =
 		if (used) then
 			check_if_used tl outp
 		else
-			check_if_used tl (outp @ [id ^": symbol is never used"])
+			check_if_used tl (outp @ ["WARNING: '" ^ id ^ "' symbol is never used"])
 
 (*
  * shrink_mem()
@@ -765,13 +790,17 @@ let rec check_if_used (mem:memory) (outp:string list) : string list =
  *   Creates a new list (memory) based on the modified values stored in sub_mem for
  *   ids that exist in mem. The new list will not include any variables created in
  *   the scope of the sub procedure. The algorithm assumes the ids are stored in the
- *   same order in sub_mem and mem
+ *   same order in sub_mem and mem. Additionally, 'check_if_used' is called on the
+ *   rest of sub_mem, which should contain only variables created in the scope of the
+ *   sub procedure. The output returned is paired as a tuple with the new memory
+ *   created.
  * Arguments:
  *   lst - new memory list being created
  *   sub_mem - memory returned by sub procedure
  *   mem - currently visible memory
+ *   outp - list of outputs
  * Return Value:
- *   memory - new list of variable, value pairs in memory
+ *   (memory * string list) - tuple of new memory and output
  *)
 let rec shrink_mem (lst:memory) (sub_mem:memory) (mem:memory) (outp:string list)
 	: (memory * string list) =
