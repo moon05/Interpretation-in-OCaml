@@ -883,8 +883,8 @@ and interpret_assign (lhs:string) (rhs:ast_e) (mem:memory)
                      (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr rhs mem) with
-  | (Error _, new_mem) -> (Bad, new_mem, inp, outp)
   | (Value num, new_mem) -> (Good, (add_to_mem lhs num [] new_mem), inp, outp)
+  | (Error str, new_mem) -> (Bad, new_mem, inp, (outp @ [str]))
 
 (*
  * interpret_read()
@@ -929,8 +929,8 @@ and interpret_write (expr:ast_e) (mem:memory)
                     (inp:string list) (outp:string list)
     : status * memory * string list * string list =
   match (interpret_expr expr mem) with
-  | (Error str, new_mem) -> (Bad, new_mem, inp, (outp @ [str]))
   | (Value num, new_mem) -> (Good, new_mem, inp, (outp @ [(string_of_int num)]))
+  | (Error str, new_mem) -> (Bad, new_mem, inp, (outp @ [str]))
 
 (*
  * interpret_if()
@@ -959,7 +959,7 @@ and interpret_if (cond:ast_e) (sl:ast_sl) (mem:memory)
 		let (new_mem3, new_outp2) = (shrink_mem [] new_mem2 new_mem new_outp) in
 		(status, new_mem3, new_inp, new_outp2)
   | (Value _, new_mem) -> (Bad, new_mem, inp, (outp @ ["non boolean expression"]))
-  | (_, new_mem) -> (Bad, new_mem, inp, outp)
+  | (Error str, new_mem) -> (Bad, new_mem, inp, (outp @ [str]))
 
 (*
  * interpret_do()
@@ -1006,7 +1006,7 @@ and interpret_check (cond:ast_e) (mem:memory)
   | (Value 0, new_mem) -> (Done, new_mem, inp, outp)
   | (Value 1, new_mem) -> (Good, new_mem, inp, outp)
   | (Value _, new_mem) -> (Bad, new_mem, inp, (outp @ ["non boolean expression"]))
-  | (_, new_mem) -> (Bad, new_mem, inp, outp)
+  | (Error str, new_mem) -> (Bad, new_mem, inp, (outp @ [str]))
 
 (*
  * interpret_expr()
