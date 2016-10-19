@@ -21,8 +21,8 @@ Description:
 		  by storing them all into one list
 	
 	Interpret functions
-		- These were the functions that took AST_ize functions as input and then
-		  interpreted the program.
+		- These were the functions that took the AST_ize as input and then interpreted
+		  the program.
 		- Most of the functions output a tuple of status code, a memory list, an input
 		  list and an output list.
 		- Only interpret_expr returns a value and memory list tuple. This function is
@@ -38,7 +38,8 @@ Description:
 	Extra-Credit
 		- We have attempted suggested extra-credit no. 3
 		- This generates warning messages at the execution for any values that were
-		  assigned into a variable and then never used
+		  assigned into a variable and then never used (These do not necessarily
+		  appear at the end of the output)
 
 
 

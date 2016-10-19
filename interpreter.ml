@@ -814,9 +814,12 @@ let rec shrink_mem (lst:memory) (sub_mem:memory) (mem:memory) (outp:string list)
 
 let rec interpret (ast:ast_sl) (full_input:string) : string =
   let inp = split (regexp "[ \t\n\r]+") full_input in
-  let (_, mem, _, outp) = interpret_sl ast [] inp [] in
-  let new_outp = check_if_used mem outp in
-  (fold_left (str_cat " ") "" new_outp) ^ "\n"
+  let (status, mem, _, outp) = interpret_sl ast [] inp [] in
+  if (status = Bad) then
+		(fold_left (str_cat " ") "" outp) ^ "\n"
+  else
+		let new_outp = check_if_used mem outp in
+		(fold_left (str_cat " ") "" new_outp) ^ "\n"
 
 (*
  * interpret_sl()
@@ -1108,7 +1111,7 @@ let main () =
   print_string (ecg_run "write foo" "");
     (* should print "foo: symbol not found" *)
   print_newline ();
-  print_string (ecg_run "read a read b" "3");
+  print_string (ecg_run "read a read b" "3 4");
     (* should print "unexpected end of input" *)
   print_newline ();;
 
